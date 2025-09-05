@@ -12,3 +12,4 @@ pydub
 gtts
 torch
 scikit-learn
+accelerate 
