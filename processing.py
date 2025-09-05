@@ -1,9 +1,9 @@
 # processing.py
 import re
 import torch
-from models import moderation_tokenizer, moderation_model, sentiment_analyzer, emotion_analyzer
-from config import CRISIS_PATTERNS, CONCERN_PATTERNS, MENTAL_HEALTH_RESOURCES
 from datetime import datetime
+from models import get_moderation_model, get_sentiment_analyzer, get_emotion_analyzer
+from config import CRISIS_PATTERNS, CONCERN_PATTERNS, MENTAL_HEALTH_RESOURCES
 
 # ==============================================================================
 #  SAFETY & MODERATION FUNCTIONS (HÀM AN TOÀN & KIỂM DUYỆT)
@@ -11,10 +11,11 @@ from datetime import datetime
 
 def moderate_text(text):
     """Kiểm duyệt văn bản để phát hiện nội dung độc hại."""
-    inputs = moderation_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-    inputs = {k: v.to(moderation_model.device) for k, v in inputs.items()}
+    mod_model, mod_tokenizer = get_moderation_model()
+    inputs = mod_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+    inputs = {k: v.to(mod_model.device) for k, v in inputs.items()}
     with torch.no_grad():
-        outputs = moderation_model(**inputs)
+        outputs = mod_model(**inputs)
     probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
     harmful_score = probs[0, 1].item()
     return {'is_harmful': harmful_score > 0.7, 'score': harmful_score}
@@ -53,7 +54,8 @@ def enhanced_crisis_detection(text):
 def analyze_sentiment(text):
     """Phân tích cảm xúc (tích cực, tiêu cực, trung tính)."""
     try:
-        result = sentiment_analyzer(text)[0]
+        analyzer = get_sentiment_analyzer()
+        result = analyzer(text)[0]
         label = result['label'].lower()
         score = result['score']
         return label, score
@@ -63,7 +65,8 @@ def analyze_sentiment(text):
 def analyze_emotions(text, top_n=3):
     """Phát hiện các cảm xúc hàng đầu trong văn bản."""
     try:
-        results = emotion_analyzer(text)[0]
+        analyzer = get_emotion_analyzer()
+        results = analyzer(text)[0]
         top_emotions = sorted(results, key=lambda x: x['score'], reverse=True)[:top_n]
         return [(emo['label'], emo['score']) for emo in top_emotions]
     except Exception:
