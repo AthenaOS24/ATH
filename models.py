@@ -6,47 +6,64 @@ from config import (
     SENTIMENT_MODEL_ID, EMOTION_MODEL_ID
 )
 
-print("--- Bắt đầu tải các mô hình AI ---")
+# Khởi tạo tất cả các mô hình là None
+llm_pipeline = None
+moderation_model = None
+moderation_tokenizer = None
+sentiment_analyzer = None
+emotion_analyzer = None
 
-# Xác định thiết bị (GPU nếu có)
-device = 0 if torch.cuda.is_available() else -1
-device_map = "auto" if torch.cuda.is_available() else {"": "cpu"}
+def get_llm_pipeline():
+    """Tải và trả về text generation pipeline (chỉ tải 1 lần)."""
+    global llm_pipeline
+    if llm_pipeline is None:
+        print("--- Đang tải mô hình LLM (Gemma)... ---")
+        device_map = "auto" if torch.cuda.is_available() else {"": "cpu"}
+        tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_ID, token=HF_TOKEN)
+        tokenizer.pad_token = tokenizer.eos_token
+        model = AutoModelForCausalLM.from_pretrained(
+            LLM_MODEL_ID,
+            token=HF_TOKEN,
+            device_map=device_map,
+            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+        )
+        llm_pipeline = pipeline(
+            "text-generation", model=model, tokenizer=tokenizer,
+            do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=512
+        )
+        print("--- Mô hình LLM đã tải xong. ---")
+    return llm_pipeline
 
-# 1. Moderation Model
-moderation_tokenizer = AutoTokenizer.from_pretrained(MODERATION_MODEL_ID)
-moderation_model = AutoModelForSequenceClassification.from_pretrained(MODERATION_MODEL_ID).to("cpu")
+def get_moderation_model():
+    """Tải mô hình kiểm duyệt."""
+    global moderation_model, moderation_tokenizer
+    if moderation_model is None:
+        print("--- Đang tải mô hình Moderation... ---")
+        moderation_tokenizer = AutoTokenizer.from_pretrained(MODERATION_MODEL_ID)
+        moderation_model = AutoModelForSequenceClassification.from_pretrained(MODERATION_MODEL_ID).to("cpu")
+        print("--- Mô hình Moderation đã tải xong. ---")
+    return moderation_model, moderation_tokenizer
 
-# 2. Llama-2-7b-chat-hf Model
-llm_tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_ID, token=HF_TOKEN)
-llm_tokenizer.pad_token = llm_tokenizer.eos_token
-llm_model = AutoModelForCausalLM.from_pretrained(
-    LLM_MODEL_ID,
-    token=HF_TOKEN,
-    device_map=device_map,
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
-)
-text_generation_pipeline = pipeline(
-    "text-generation",
-    model=llm_model,
-    tokenizer=llm_tokenizer,
-    do_sample=True,
-    temperature=0.7,
-    top_p=0.9,
-    max_new_tokens=512
-)
+def get_sentiment_analyzer():
+    """Tải mô hình phân tích cảm xúc."""
+    global sentiment_analyzer
+    if sentiment_analyzer is None:
+        print("--- Đang tải mô hình Sentiment... ---")
+        device = 0 if torch.cuda.is_available() else -1
+        sentiment_analyzer = pipeline(
+            "sentiment-analysis", model=SENTIMENT_MODEL_ID, tokenizer=SENTIMENT_MODEL_ID, device=device
+        )
+        print("--- Mô hình Sentiment đã tải xong. ---")
+    return sentiment_analyzer
 
-# 3. Sentiment and Emotion Analyzers
-sentiment_analyzer = pipeline(
-    "sentiment-analysis",
-    model=SENTIMENT_MODEL_ID,
-    tokenizer=SENTIMENT_MODEL_ID,
-    device=device
-)
-emotion_analyzer = pipeline(
-    "text-classification",
-    model=EMOTION_MODEL_ID,
-    top_k=None,
-    device=device
-)
-
-print("--- Tất cả mô hình đã được tải thành công ---")
+def get_emotion_analyzer():
+    """Tải mô hình phân tích cảm xúc."""
+    global emotion_analyzer
+    if emotion_analyzer is None:
+        print("--- Đang tải mô hình Emotion... ---")
+        device = 0 if torch.cuda.is_available() else -1
+        emotion_analyzer = pipeline(
+            "text-classification", model=EMOTION_MODEL_ID, top_k=None, device=device
+        )
+        print("--- Mô hình Emotion đã tải xong. ---")
+    return emotion_analyzer
