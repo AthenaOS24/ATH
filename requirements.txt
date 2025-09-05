@@ -1,0 +1,14 @@
+# requirements.txt
+fastapi
+uvicorn[standard]
+python-dotenv
+transformers
+datasets
+langchain
+faiss-cpu
+sentence-transformers
+speechrecognition
+pydub
+gtts
+torch
+scikit-learn
