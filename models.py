@@ -27,24 +27,31 @@ def get_llm_pipeline():
     """Tải và trả về text generation pipeline (chỉ tải 1 lần)."""
     global llm_pipeline
     if llm_pipeline is None:
-        print("--- Đang tải mô hình LLM (Gemma)... ---")
-        # Trên Railway không có GPU, nên chúng ta sẽ dùng CPU
+        print(f"--- Đang tải mô hình LLM ({LLM_MODEL_ID})... ---")
         device_map = "auto"
         
         tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_ID, token=HF_TOKEN)
-        tokenizer.pad_token = tokenizer.eos_token
+        
+        # Một số tokenizer không có pad_token mặc định, gán nó bằng eos_token
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
         
         model = AutoModelForCausalLM.from_pretrained(
             LLM_MODEL_ID,
             token=HF_TOKEN,
             device_map=device_map,
-            torch_dtype=torch.float32 
-            trust_remote_code=True
+            torch_dtype=torch.float32,
+            trust_remote_code=True  # Quan trọng: Cho phép tải các mô hình tùy chỉnh
         )
         
         llm_pipeline = pipeline(
-            "text-generation", model=model, tokenizer=tokenizer,
-            do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=512
+            "text-generation", 
+            model=model, 
+            tokenizer=tokenizer,
+            do_sample=True, 
+            temperature=0.7, 
+            top_p=0.9, 
+            max_new_tokens=512
         )
         print("--- Mô hình LLM đã tải xong. ---")
     return llm_pipeline
@@ -65,7 +72,10 @@ def get_sentiment_analyzer():
     if sentiment_analyzer is None:
         print("--- Đang tải mô hình Sentiment... ---")
         sentiment_analyzer = pipeline(
-            "sentiment-analysis", model=SENTIMENT_MODEL_ID, tokenizer=SENTIMENT_MODEL_ID, device=-1 # -1 để chắc chắn dùng CPU
+            "sentiment-analysis", 
+            model=SENTIMENT_MODEL_ID, 
+            tokenizer=SENTIMENT_MODEL_ID, 
+            device=-1 # -1 để chắc chắn dùng CPU
         )
         print("--- Mô hình Sentiment đã tải xong. ---")
     return sentiment_analyzer
@@ -76,7 +86,10 @@ def get_emotion_analyzer():
     if emotion_analyzer is None:
         print("--- Đang tải mô hình Emotion... ---")
         emotion_analyzer = pipeline(
-            "text-classification", model=EMOTION_MODEL_ID, top_k=None, device=-1 # -1 để chắc chắn dùng CPU
+            "text-classification", 
+            model=EMOTION_MODEL_ID, 
+            top_k=None, 
+            device=-1 # -1 để chắc chắn dùng CPU
         )
         print("--- Mô hình Emotion đã tải xong. ---")
     return emotion_analyzer
