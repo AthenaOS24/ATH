@@ -5,67 +5,39 @@ import asyncio
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import google.generativeai as genai
 
-# Lấy API Keys từ biến môi trường
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-HF_TOKEN = os.getenv("HF_TOKEN") # Token của Hugging Face
+# Lấy API Key của Hugging Face từ biến môi trường
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-# Cấu hình client Gemini
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-
-# URL cho các model phân tích trên Hugging Face Inference API
+# URL cho các model trên Hugging Face Inference API
+CHAT_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
 SENTIMENT_API_URL = "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
 EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/distilbert-base-uncased-emotion"
 
 
 # === PHẦN 2: CÁC HÀM GỌI API ===
 
-# Hàm gọi API của Hugging Face để phân tích
-async def analyze_sentiment_emotion_api(text: str, client: httpx.AsyncClient):
+# Helper function to query the HF API
+async def query_hf_api(api_url: str, payload: dict, client: httpx.AsyncClient):
     if not HF_TOKEN:
-        return {"error": "Hugging Face API token is not configured."}
-
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    json_payload = {"inputs": text}
-
-    try:
-        # Gọi cả 2 API cùng lúc để tiết kiệm thời gian
-        sentiment_task = client.post(SENTIMENT_API_URL, headers=headers, json=json_payload)
-        emotion_task = client.post(EMOTION_API_URL, headers=headers, json=json_payload)
-        
-        responses = await asyncio.gather(sentiment_task, emotion_task)
-        
-        sentiment_res = responses[0].json()
-        emotion_res = responses[1].json()
-
-        return {"sentiment": sentiment_res, "emotions": emotion_res}
-    except Exception as e:
-        print(f"Lỗi khi gọi Hugging Face API: {e}")
-        return {"sentiment": "unknown", "emotions": "unknown"}
-
-# Hàm gọi API của Gemini để chat
-async def generate_response_from_gemini(user_input: str, history: list):
-    if not GEMINI_API_KEY:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
+        raise HTTPException(status_code=500, detail="HF_TOKEN is not configured on the server.")
     
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     try:
-        model = genai.GenerativeModel('gemini-pro')
-        gemini_history = []
-        for message in history:
-            role = "user" if message.get("role") == "user" else "model"
-            gemini_history.append({"role": role, "parts": [{"text": message.get("content", "")}]})
-
-        chat = model.start_chat(history=gemini_history)
-        response = await chat.send_message_async(user_input)
-        return response.text
+        response = await client.post(api_url, headers=headers, json=payload, timeout=45)
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as e:
+        print(f"Lỗi API từ Hugging Face ({api_url}): {e.response.text}")
+        # Return a structured error to avoid crashing the whole request
+        return {"error": f"API Error: {e.response.status_code}", "detail": e.response.text}
     except Exception as e:
-        print(f"Lỗi khi gọi API Gemini: {e}")
-        raise HTTPException(status_code=503, detail="Error communicating with Gemini API.")
+        print(f"Lỗi không xác định khi gọi {api_url}: {e}")
+        return {"error": "Unknown error during API call."}
+
 
 # === PHẦN 3: TẠO API VỚI FASTAPI ===
-app = FastAPI(title="Athena AI Therapist API (API-Only)")
+app = FastAPI(title="Athena AI Therapist API (Hugging Face-Only)")
 
 class ChatRequest(BaseModel):
     user_input: str
@@ -81,21 +53,38 @@ async def handle_chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="User input is empty.")
 
     try:
+        # Build the prompt for the chat model
+        prompt = ""
+        for message in request.history:
+            role = "User" if message.get("role") == "user" else "Assistant"
+            prompt += f"{role}: {message.get('content', '')}\n"
+        prompt += f"User: {request.user_input}\nAssistant:"
+
+        # Define payloads for all API calls
+        chat_payload = {"inputs": prompt, "parameters": {"max_new_tokens": 250}}
+        analysis_payload = {"inputs": request.user_input}
+
         async with httpx.AsyncClient() as client:
-            # Gọi cả Gemini và Hugging Face cùng một lúc
-            chat_task = generate_response_from_gemini(request.user_input, request.history)
-            analysis_task = analyze_sentiment_emotion_api(request.user_input, client)
+            # Run all three API calls concurrently
+            chat_task = query_hf_api(CHAT_API_URL, chat_payload, client)
+            sentiment_task = query_hf_api(SENTIMENT_API_URL, analysis_payload, client)
+            emotion_task = query_hf_api(EMOTION_API_URL, analysis_payload, client)
             
-            results = await asyncio.gather(chat_task, analysis_task)
+            results = await asyncio.gather(chat_task, sentiment_task, emotion_task)
             
-            ai_response = results[0]
-            sentiment_data = results[1]
+            chat_result = results[0]
+            sentiment_result = results[1]
+            emotion_result = results[2]
+
+        # Process chat response to get only the new text
+        ai_response = chat_result[0].get('generated_text', '').replace(prompt, '').strip()
 
         return {
             "response": ai_response,
-            "sentiment_analysis": sentiment_data
+            "sentiment_analysis": sentiment_result,
+            "emotion_analysis": emotion_result
         }
     except Exception as e:
         print("--- [LỖI] Đã có lỗi xảy ra trong endpoint /chat! ---")
         traceback.print_exc()
-        raise e
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {str(e)}")
