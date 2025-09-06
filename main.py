@@ -43,9 +43,30 @@ def handle_chat(request: ChatRequest):
     """
     Endpoint chính để trò chuyện với Athena.
     """
-    response_text = chatbot.generate_response(
-        user_input=request.user_message,
-        history=[msg.dict() for msg in request.history]
-    )
+    # === BẮT ĐẦU THÊM LOGS ===
+    print("\n--- [LOG 1] Đã nhận được yêu cầu /chat mới. ---")
+    print(f"--- [LOG 2] Nội dung tin nhắn: '{request.user_message}' ---")
     
-    return {"response": response_text}
+    try:
+        # Đây là bước quan trọng, có thể gây crash hoặc chạy chậm
+        response_text = chatbot.generate_response(
+            user_input=request.user_message,
+            history=[msg.dict() for msg in request.history]
+        )
+        
+        print("--- [LOG 3] Đã tạo phản hồi thành công. ---")
+        
+        response = {"response": response_text}
+        
+        print("--- [LOG 4] Đang gửi phản hồi về cho người dùng. ---")
+        
+        return response
+        
+    except Exception as e:
+        # Ghi lại bất kỳ lỗi Python nào xảy ra
+        print(f"!!!!!!!!!! [LỖI] Đã có lỗi xảy ra trong quá trình xử lý: {e} !!!!!!!!!!!")
+        # In ra traceback để debug
+        import traceback
+        traceback.print_exc()
+        return {"response": "Xin lỗi, đã có lỗi xảy ra phía server."}
+    # === KẾT THÚC THÊM LOGS ===
