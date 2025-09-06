@@ -65,7 +65,7 @@ def format_prompt_with_context(user_input, conversation_history="", is_first_mes
 
 def generate_response(user_input: str, history: list):
     """
-    Hàm chính để tạo phản hồi từ chatbot.
+    Main function to generate a response from the chatbot.
     """
     sanitized_input = sanitize_input(user_input)
     
@@ -84,7 +84,7 @@ def generate_response(user_input: str, history: list):
 
     is_first_message = not history
     
-    # Lấy pipeline, sẽ tự động tải nếu chưa có
+    # Get the pipeline, will automatically load if not already
     pipe = get_llm_pipeline()
     llm_tokenizer = pipe.tokenizer
     
@@ -113,8 +113,8 @@ def generate_response(user_input: str, history: list):
     if urgency_level:
         resources = "\n".join(recommend_resources(urgency_level))
         if urgency_level == "crisis":
-            response += f"\n\n🔴 I'm very concerned about your safety. Please consider reaching out to:\n{resources}"
+            response += f"\nI'm very concerned about your safety. Please consider reaching out to:\n{resources}"
         else:
-            response += f"\n\n🟡 These resources might be helpful:\n{resources}"
+            response += f"\nThese resources might be helpful:\n{resources}"
             
     return response
