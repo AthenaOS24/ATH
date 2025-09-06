@@ -1,4 +1,3 @@
-# models.py
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, AutoModelForSequenceClassification
 from config import (
@@ -6,7 +5,7 @@ from config import (
     SENTIMENT_MODEL_ID, EMOTION_MODEL_ID
 )
 
-# Khởi tạo tất cả các mô hình là None
+# Initialize all models to None
 llm_pipeline = None
 moderation_model = None
 moderation_tokenizer = None
@@ -15,8 +14,8 @@ emotion_analyzer = None
 
 def load_all_models():
     """
-    Tải tất cả các mô hình cần thiết cho ứng dụng.
-    Hàm này được gọi một lần khi server khởi động.
+    Loads all models required for the application.
+    This function is called once when the server starts.
     """
     get_llm_pipeline()
     get_moderation_model()
@@ -24,15 +23,15 @@ def load_all_models():
     get_emotion_analyzer()
 
 def get_llm_pipeline():
-    """Tải và trả về text generation pipeline (chỉ tải 1 lần)."""
+    """Loads and returns the text generation pipeline (loads only once)."""
     global llm_pipeline
     if llm_pipeline is None:
-        print(f"--- Đang tải mô hình LLM ({LLM_MODEL_ID})... ---")
+        print(f"--- Loading LLM model ({LLM_MODEL_ID})... ---")
         device_map = "auto"
         
         tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_ID, token=HF_TOKEN)
         
-        # Một số tokenizer không có pad_token mặc định, gán nó bằng eos_token
+        # Some tokenizers don't have a default pad_token, assign it to eos_token
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
         
@@ -41,7 +40,7 @@ def get_llm_pipeline():
             token=HF_TOKEN,
             device_map=device_map,
             torch_dtype=torch.float32,
-            trust_remote_code=True  # Quan trọng: Cho phép tải các mô hình tùy chỉnh
+            trust_remote_code=True  # Important: Allows loading custom models
         )
         
         llm_pipeline = pipeline(
@@ -53,43 +52,43 @@ def get_llm_pipeline():
             top_p=0.9, 
             max_new_tokens=512
         )
-        print("--- Mô hình LLM đã tải xong. ---")
+        print("--- LLM model loaded successfully. ---")
     return llm_pipeline
 
 def get_moderation_model():
-    """Tải mô hình kiểm duyệt."""
+    """Loads the moderation model."""
     global moderation_model, moderation_tokenizer
     if moderation_model is None:
-        print("--- Đang tải mô hình Moderation... ---")
+        print("--- Loading Moderation model... ---")
         moderation_tokenizer = AutoTokenizer.from_pretrained(MODERATION_MODEL_ID)
         moderation_model = AutoModelForSequenceClassification.from_pretrained(MODERATION_MODEL_ID).to("cpu")
-        print("--- Mô hình Moderation đã tải xong. ---")
+        print("--- Moderation model loaded successfully. ---")
     return moderation_model, moderation_tokenizer
 
 def get_sentiment_analyzer():
-    """Tải mô hình phân tích cảm xúc."""
+    """Loads the sentiment analysis model."""
     global sentiment_analyzer
     if sentiment_analyzer is None:
-        print("--- Đang tải mô hình Sentiment... ---")
+        print("--- Loading Sentiment model... ---")
         sentiment_analyzer = pipeline(
             "sentiment-analysis", 
             model=SENTIMENT_MODEL_ID, 
             tokenizer=SENTIMENT_MODEL_ID, 
-            device=-1 # -1 để chắc chắn dùng CPU
+            device=-1 # -1 to ensure CPU usage
         )
-        print("--- Mô hình Sentiment đã tải xong. ---")
+        print("--- Sentiment model loaded successfully. ---")
     return sentiment_analyzer
 
 def get_emotion_analyzer():
-    """Tải mô hình phân tích cảm xúc."""
+    """Loads the emotion analysis model."""
     global emotion_analyzer
     if emotion_analyzer is None:
-        print("--- Đang tải mô hình Emotion... ---")
+        print("--- Loading Emotion model... ---")
         emotion_analyzer = pipeline(
             "text-classification", 
             model=EMOTION_MODEL_ID, 
             top_k=None, 
-            device=-1 # -1 để chắc chắn dùng CPU
+            device=-1 # -1 to ensure CPU usage
         )
-        print("--- Mô hình Emotion đã tải xong. ---")
+        print("--- Emotion model loaded successfully. ---")
     return emotion_analyzer
