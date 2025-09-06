@@ -1,4 +1,12 @@
 fastapi
 uvicorn[standard]
 pydantic
-httpx
+# Thư viện AI cần thiết
+torch
+transformers
+accelerate
+# Thư viện cho các model cụ thể
+sentence-transformers
+scikit-learn
+# Thư viện để load biến môi trường
+python-dotenv
