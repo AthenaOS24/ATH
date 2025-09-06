@@ -38,7 +38,8 @@ def get_llm_pipeline():
             LLM_MODEL_ID,
             token=HF_TOKEN,
             device_map=device_map,
-            torch_dtype=torch.float32 # Sử dụng float32 cho CPU
+            torch_dtype=torch.float32 
+            trust_remote_code=True
         )
         
         llm_pipeline = pipeline(
