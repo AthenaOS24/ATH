@@ -1,15 +1,17 @@
 # requirements.txt
+
+# --- Core Web Framework ---
 fastapi
 uvicorn[standard]
 python-dotenv
+
+# --- Machine Learning Libraries ---
+# Chỉ định torch phiên bản cho CPU để nhẹ hơn
+torch --index-url https://download.pytorch.org/whl/cpu
 transformers
-datasets
-langchain
-faiss-cpu
 sentence-transformers
-speechrecognition
-pydub
-gtts
-torch
 scikit-learn
-accelerate 
+accelerate
+
+# Ghi chú: Đã loại bỏ các thư viện không dùng tới:
+# langchain, faiss-cpu, speechrecognition, pydub, gtts, datasets
