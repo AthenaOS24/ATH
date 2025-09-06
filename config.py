@@ -2,50 +2,50 @@
 import os
 from dotenv import load_dotenv
 
-# Tải biến môi trường từ file .env (nếu có)
+# Load environment variables from .env file (if available)
 load_dotenv()
 
 # ==============================================================================
-#  MODEL CONFIGURATIONS (CẤU HÌNH MÔ HÌNH)
+# MODEL CONFIGURATIONS
 # ==============================================================================
 
 # Model IDs from Hugging Face
 MODERATION_MODEL_ID = "facebook/roberta-hate-speech-dynabench-r4-target"
-LLM_MODEL_ID = "microsoft/phi-2" 
+LLM_MODEL_ID = "microsoft/phi-2"
 SENTIMENT_MODEL_ID = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 EMOTION_MODEL_ID = "bhadresh-savani/distilbert-base-uncased-emotion"
 EMBEDDING_MODEL_ID = "all-MiniLM-L6-v2"
 
-# Hugging Face Token (lấy từ biến môi trường)
+# Hugging Face Token (retrieved from environment variables)
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 
 # ==============================================================================
-#  CRISIS DETECTION PATTERNS (CÁC MẪU NHẬN DIỆN KHỦNG HOẢNG)
+# CRISIS DETECTION PATTERNS
 # ==============================================================================
-# Các mẫu này cho thấy nguy cơ tức thời, có kế hoạch hoặc hành động cụ thể.
+# These patterns indicate immediate risk, planned actions, or explicit intent.
 
 CRISIS_PATTERNS = [
-    # --- Ý định trực tiếp và rõ ràng ---
+    # --- Direct and explicit intentions ---
     r"\bi (want to|wanna|'m going to|gonna|will|plan to|need to) (die|kill myself|k.m.s|end it all|end my life)\b",
     r"\bi can't (go on|live|take it) (like this )?anymore\b",
     r"\b(i'm|i am) (seriously|really) (thinking of|considering) suicide\b",
     r"\b(goodbye|bye bye) (cruel )?(world|everyone)\b",
     r"\bthis is my last (message|post|day|night)\b",
     r"\bi've decided to end my life\b",
-    
-    # --- Các phương pháp cụ thể ---
+
+    # --- Specific methods ---
     r"\b(i'm|i am) going to (jump|hang|overdose|o.d.|shoot|cut myself)\b",
     r"\b(planning to|gonna) (jump off a bridge|hang myself|take all my pills)\b",
     r"\bi (have|got) a (gun|rope|blade|pills) and i'm going to use it\b",
 
-    # --- Hành động đã hoặc đang diễn ra ---
+    # --- Actions already taken or happening now ---
     r"\b(i'm|i am) (cutting|bleeding) myself (right now|currently)\b",
     r"\b(i've|i have) (already )?taken (pills|medication|the whole bottle) to end my life\b",
     r"\bi (just|already) (cut myself|tried to hang myself|jumped)\b",
     r"\b(i'm|i am) being (abused|raped|assaulted) (right now|currently)\b",
 
-    # --- Lời nói mang tính kết thúc ---
+    # --- Farewell statements ---
     r"\b(there's|there is) no other way out\b",
     r"\beveryone would be better off without me\b",
     r"\bi have a plan to kill myself\b",
@@ -54,32 +54,33 @@ CRISIS_PATTERNS = [
 
 
 # ==============================================================================
-#  CONCERN DETECTION PATTERNS (CÁC MẪU NHẬN DIỆN MỐI LO NGẠI)
+# CONCERN DETECTION PATTERNS
 # ==============================================================================
-# Các mẫu này cho thấy ý định tự tử, tuyệt vọng, tự hại nhưng không có nguy cơ tức thời.
+# These patterns indicate suicidal thoughts, despair, or self-harm intentions
+# but without immediate risk.
 
 CONCERN_PATTERNS = [
-    # --- Cảm giác tuyệt vọng và vô giá trị ---
+    # --- Feelings of hopelessness and worthlessness ---
     r"\bi feel (so )?(hopeless|trapped|worthless|empty|numb)\b",
     r"\b(what's|what is) the point of (living|anything)\b",
     r"\b(i have|i've got|there's|there is) no (reason|point) to live\b",
     r"\bi (just )?don't want to be here anymore\b",
     r"\bi wish i (was dead|was never born|could disappear)\b",
     r"\bmy life is (meaningless|a mess|not worth living)\b",
-    
-    # --- Gánh nặng và sự cô lập ---
+
+    # --- Feeling like a burden and isolation ---
     r"\b(i'm|i am) (such )?a burden (to everyone)?\b",
     r"\bno one (cares|would miss me|understands)\b",
     r"\bi feel (so|completely) alone\b",
     r"\bi'm better off dead\b",
 
-    # --- Ý định tự tử không cụ thể ---
+    # --- Non-specific suicidal intentions ---
     r"\b(i've|i have) been feeling (really )?(depressed|suicidal)\b",
     r"\bi (sometimes|often|can't stop) think(ing)? about (dying|ending it|self-harm)\b",
     r"\b(i'm|i am) struggling with (suicidal thoughts|self-harm urges)\b",
     r"\bthe pain is (unbearable|too much)\b",
-    
-    # --- Hành vi tự hại (không có tính tức thời) ---
+
+    # --- Self-harm behavior (non-immediate) ---
     r"\bi (self-harm|self harm|s.h.|hurt myself|cut myself)\b",
     r"\b(i want to|i feel like) (cutting|hurting myself)\b",
     r"\bthe urge to (cut|self harm) is (so strong|back)\b"
@@ -87,7 +88,7 @@ CONCERN_PATTERNS = [
 
 
 # ==============================================================================
-#  MENTAL HEALTH RESOURCES (NGUỒN HỖ TRỢ SỨC KHỎE TÂM THẦN)
+# MENTAL HEALTH RESOURCES
 # ==============================================================================
 
 MENTAL_HEALTH_RESOURCES = {
@@ -117,10 +118,10 @@ MENTAL_HEALTH_RESOURCES = {
 
 
 # ==============================================================================
-#  ENVIRONMENT CONFIGURATION (CẤU HÌNH MÔI TRƯỜNG)
+# ENVIRONMENT CONFIGURATION
 # ==============================================================================
 
-# Cấu hình để tối ưu hóa việc sử dụng bộ nhớ GPU của PyTorch
+# Configure PyTorch to optimize GPU memory usage
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
-print("✅ Configuration file loaded successfully with extended patterns.")
+print("Configuration file loaded successfully with extended patterns.")
