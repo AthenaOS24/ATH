@@ -13,20 +13,34 @@ moderation_tokenizer = None
 sentiment_analyzer = None
 emotion_analyzer = None
 
+def load_all_models():
+    """
+    Tải tất cả các mô hình cần thiết cho ứng dụng.
+    Hàm này được gọi một lần khi server khởi động.
+    """
+    get_llm_pipeline()
+    get_moderation_model()
+    get_sentiment_analyzer()
+    get_emotion_analyzer()
+
 def get_llm_pipeline():
     """Tải và trả về text generation pipeline (chỉ tải 1 lần)."""
     global llm_pipeline
     if llm_pipeline is None:
         print("--- Đang tải mô hình LLM (Gemma)... ---")
-        device_map = "auto" if torch.cuda.is_available() else {"": "cpu"}
+        # Trên Railway không có GPU, nên chúng ta sẽ dùng CPU
+        device_map = "auto"
+        
         tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_ID, token=HF_TOKEN)
         tokenizer.pad_token = tokenizer.eos_token
+        
         model = AutoModelForCausalLM.from_pretrained(
             LLM_MODEL_ID,
             token=HF_TOKEN,
             device_map=device_map,
-            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+            torch_dtype=torch.float32 # Sử dụng float32 cho CPU
         )
+        
         llm_pipeline = pipeline(
             "text-generation", model=model, tokenizer=tokenizer,
             do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=512
@@ -49,9 +63,8 @@ def get_sentiment_analyzer():
     global sentiment_analyzer
     if sentiment_analyzer is None:
         print("--- Đang tải mô hình Sentiment... ---")
-        device = 0 if torch.cuda.is_available() else -1
         sentiment_analyzer = pipeline(
-            "sentiment-analysis", model=SENTIMENT_MODEL_ID, tokenizer=SENTIMENT_MODEL_ID, device=device
+            "sentiment-analysis", model=SENTIMENT_MODEL_ID, tokenizer=SENTIMENT_MODEL_ID, device=-1 # -1 để chắc chắn dùng CPU
         )
         print("--- Mô hình Sentiment đã tải xong. ---")
     return sentiment_analyzer
@@ -61,9 +74,8 @@ def get_emotion_analyzer():
     global emotion_analyzer
     if emotion_analyzer is None:
         print("--- Đang tải mô hình Emotion... ---")
-        device = 0 if torch.cuda.is_available() else -1
         emotion_analyzer = pipeline(
-            "text-classification", model=EMOTION_MODEL_ID, top_k=None, device=device
+            "text-classification", model=EMOTION_MODEL_ID, top_k=None, device=-1 # -1 để chắc chắn dùng CPU
         )
         print("--- Mô hình Emotion đã tải xong. ---")
     return emotion_analyzer
