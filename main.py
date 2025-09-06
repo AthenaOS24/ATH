@@ -1,36 +1,27 @@
 # main.py
+import os
+import httpx
 import traceback
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict
+from dotenv import load_dotenv
 
-# Nhập các hàm chính từ các file của bạn
-from chatbot import generate_response
-from models import load_all_models
-from processing import combined_sentiment_analysis
+# Load biến môi trường (HF_TOKEN)
+load_dotenv()
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-# === PART 1: FASTAPI APP SETUP ===
+# API URL của model bạn đã chọn
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
+# === FASTAPI APP SETUP ===
 app = FastAPI(
-    title="Athena AI Therapist API (Local Inference)",
-    description="An API running a local instance of the Athena virtual psychologist model.",
-    version="1.0.0"
+    title="Athena AI Therapist API (via Inference API)",
+    description="An API that connects to a powerful, dedicated Hugging Face Inference API.",
+    version="2.0.0"
 )
 
-# Load tất cả các model khi ứng dụng khởi động
-@app.on_event("startup")
-def on_startup():
-    print("--- Server is starting up, loading all AI models... ---")
-    try:
-        load_all_models()
-        print("--- All models loaded successfully. Server is ready. ---")
-    except Exception as e:
-        print(f"--- FATAL ERROR: Could not load models on startup. ---")
-        traceback.print_exc()
-
-
-# === PART 2: PYDANTIC MODELS FOR REQUEST/RESPONSE ===
-
+# === PYDANTIC MODELS ===
 class HistoryItem(BaseModel):
     role: str
     content: str
@@ -39,57 +30,74 @@ class ChatRequest(BaseModel):
     user_input: str
     history: List[HistoryItem] = Field(default_factory=list)
 
+# === API HELPER FUNCTION ===
+async def query_hf_api(payload: dict):
+    if not HF_TOKEN:
+        raise HTTPException(status_code=500, detail="HF_TOKEN is not configured on the server.")
+    
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(API_URL, headers=headers, json=payload, timeout=30.0)
+            response.raise_for_status() # Sẽ báo lỗi nếu status code là 4xx hoặc 5xx
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            print(f"API Error from Hugging Face: {e.response.text}")
+            raise HTTPException(status_code=e.response.status_code, detail=f"Hugging Face API Error: {e.response.text}")
+        except httpx.RequestError as e:
+            print(f"Request failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to connect to Hugging Face API: {e}")
 
-# === PART 3: API ENDPOINTS ===
-
+# === API ENDPOINTS ===
 @app.get("/", tags=["Status"])
 def read_root():
-    """Check if the API server is running."""
-    return {"status": "Athena AI API is running with local models"}
+    return {"status": "Athena AI API (Inference API mode) is running"}
 
 @app.post("/chat", tags=["Chat"])
 async def handle_chat(request: ChatRequest):
-    """
-    Handles the main chat interaction.
-    Processes user input, generates a response using the local LLM,
-    and returns the response along with sentiment analysis.
-    """
     if not request.user_input or not request.user_input.strip():
         raise HTTPException(status_code=400, detail="User input cannot be empty.")
 
-    try:
-        # 1. Lấy lịch sử chat từ request
-        # Pydantic đã chuyển đổi JSON thành đối tượng Python, nhưng hàm của bạn
-        # có thể mong đợi một list of dicts. Chúng ta cần đảm bảo định dạng đúng.
-        history_list_of_dicts = [item.dict() for item in request.history]
+    # 1. Định dạng prompt theo chuẩn của model Mistral
+    # Chúng ta sẽ tạo một chuỗi prompt hoàn chỉnh để gửi đi
+    prompt = "<s>[INST] You are Athena, a compassionate AI therapist. Always respond with empathy and support. [/INST]\n"
+    for message in request.history:
+        if message.role == 'user':
+            prompt += f"<s>[INST] {message.content} [/INST]\n"
+        else:
+            prompt += f"{message.content}\n" # Phản hồi của assistant không cần tag
+    
+    prompt += f"<s>[INST] {request.user_input} [/INST]"
 
-        # 2. Phân tích cảm xúc của tin nhắn người dùng
-        # Chúng ta chạy lại phân tích ở đây để trả về output giống như bạn mong muốn
-        sentiment, score, emotions = combined_sentiment_analysis(request.user_input)
-        sentiment_result = {
-            "label": sentiment,
-            "score": score
+    # 2. Tạo payload để gửi đến API
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 250,
+            "repetition_penalty": 1.2,
+            "return_full_text": False, # Rất quan trọng: Chỉ trả về phần text mới
         }
-        # Định dạng lại emotion_result để tương thích với output cũ
-        emotion_result = [[{"label": e[0], "score": e[1]} for e in emotions]]
+    }
 
-
-        # 3. Tạo phản hồi AI bằng cách sử dụng logic từ chatbot.py
-        # Đây là bước quan trọng nhất, gọi đến hệ thống "xịn" của bạn
-        ai_response = generate_response(
-            user_input=request.user_input,
-            history=history_list_of_dicts
-        )
-
-        # 4. Trả về kết quả
+    # 3. Gọi API và nhận kết quả
+    try:
+        api_result = await query_hf_api(payload)
+        
+        # API trả về một list, chúng ta lấy phần tử đầu tiên
+        ai_response = api_result[0].get('generated_text', 'Sorry, I could not generate a response.').strip()
+        
+        # Chúng ta có thể thêm lại phần phân tích cảm xúc ở đây nếu muốn
+        # (Sử dụng code local từ file processing.py hoặc gọi API khác)
+        
         return {
             "response": ai_response,
-            "sentiment_analysis": sentiment_result,
-            "emotion_analysis": emotion_result
+            # Các trường analysis có thể tạm bỏ trống hoặc thêm sau
+            "sentiment_analysis": {}, 
+            "emotion_analysis": {}
         }
 
     except Exception as e:
         print("--- [ERROR] An error occurred in the /chat endpoint! ---")
         traceback.print_exc()
-        # Trả về lỗi 500 với thông tin chi tiết
-        raise HTTPException(status_code=500, detail=f"An internal server error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
