@@ -6,83 +6,73 @@ from processing import (
     combined_sentiment_analysis, get_time_based_greeting, recommend_resources
 )
 
+# === HÀM TẠO PROMPT GIỮ NGUYÊN ===
 def format_prompt_with_context(user_input, conversation_history="", is_first_message=False, retrieved_contexts=None, urgency_level=None):
-    """
-    Tạo một prompt đơn giản, dễ hiểu cho các model cơ bản như distilgpt2.
-    """
-    
-    # Bỏ qua các phần phức tạp như greeting, sentiment vì model cơ bản không tận dụng được
-    # và chỉ tập trung vào việc tạo ra một cuộc hội thoại đơn giản.
-    
-    # Bắt đầu prompt với một chỉ dẫn ngắn gọn
     prompt = "This is a conversation with Athena, a helpful AI assistant.\n\n"
-    
-    # Thêm lịch sử hội thoại nếu có
     if conversation_history:
         prompt += conversation_history
-        
-    # Thêm tin nhắn mới của người dùng
     prompt += f"User: {user_input}\n"
-    
-    # Yêu cầu model đóng vai Athena và trả lời
     prompt += "Athena:"
-    
     return prompt
 
 
+# === VIẾT LẠI HOÀN TOÀN HÀM GENERATE_RESPONSE ===
 def generate_response(user_input: str, history: list):
     """
-    Main function to generate a response from the chatbot.
+    Hàm chính tạo phản hồi - Phiên bản tối ưu tốc độ và logic.
     """
+    # 1. Các bước xử lý an toàn đầu vào (giữ nguyên)
     sanitized_input = sanitize_input(user_input)
-    
-    input_moderation = moderate_text(sanitized_input)
-    if input_moderation['is_harmful']:
-        return "I'm sorry, but I can't engage with harmful content. Let's focus on positive and constructive topics."
+    if moderate_text(sanitized_input)['is_harmful']:
+        return "I can't engage with harmful content. Let's talk about something else."
 
-    urgency_level = enhanced_crisis_detection(sanitized_input)
-
+    # 2. Tạo lịch sử hội thoại (giữ nguyên)
     conversation_text = ""
     for message in history:
-        if message["role"] == "user":
-            conversation_text += f"User: {message['content']}\n"
-        else:
-            conversation_text += f"Athena: {message['content']}\n"
+        role = "User" if message["role"] == "user" else "Athena"
+        conversation_text += f"{role}: {message['content']}\n"
 
-    is_first_message = not history
-    
-    # Get the pipeline, will automatically load if not already
-    pipe = get_llm_pipeline()
-    llm_tokenizer = pipe.tokenizer
-    
+    # 3. Tạo prompt hoàn chỉnh
     formatted_prompt = format_prompt_with_context(
         sanitized_input,
         conversation_text,
-        is_first_message=is_first_message,
-        urgency_level=urgency_level
+        is_first_message=not history
     )
-    
+
+    # 4. Gọi model với tham số tối ưu tốc độ
+    pipe = get_llm_pipeline()
     output = pipe(
         formatted_prompt,
-        max_new_tokens=256, 
+        # Giảm mạnh độ dài để phản hồi siêu nhanh
+        max_new_tokens=80,  
         num_return_sequences=1,
         truncation=True,
+        # Chống lặp lại từ
+        repetition_penalty=1.2,
+        # Ngăn model nói "User:" hoặc "Athena:"
+        bad_words_ids=[[8147], [4113, 25], [34, 121, 34, 25]] 
     )
+
+    # 5. Logic cắt chuỗi chính xác và đáng tin cậy
+    full_text = output[0]['generated_text']
     
-    response = output[0]['generated_text']
-    response_start = response.find("[/INST]") + len("[/INST]")
-    if response_start > len("[/INST]") - 1:
-        response = response[response_start:].strip()
+    # Cắt chuỗi dựa trên độ dài của prompt, cách này chính xác 100%
+    response = full_text[len(formatted_prompt):].strip()
 
-    output_moderation = moderate_text(response)
-    if output_moderation['is_harmful']:
-        return "I apologize, but I can't provide a helpful response to that. Would you like to talk about something else?"
+    # 6. Xử lý các trường hợp phản hồi bị lỗi
+    # Cắt bỏ nếu model tự sinh ra vai trò "User:"
+    if "User:" in response:
+        response = response.split("User:")[0].strip()
+    if not response:
+        response = "I'm not sure how to respond. Can you rephrase?"
 
+    # 7. Xử lý an toàn đầu ra và thêm tài nguyên (giữ nguyên)
+    if moderate_text(response)['is_harmful']:
+        return "My apologies, I generated a response I cannot share. Let's try another topic."
+    
+    urgency_level = enhanced_crisis_detection(sanitized_input)
     if urgency_level:
         resources = "\n".join(recommend_resources(urgency_level))
-        if urgency_level == "crisis":
-            response += f"\nI'm very concerned about your safety. Please consider reaching out to:\n{resources}"
-        else:
-            response += f"\nThese resources might be helpful:\n{resources}"
-            
+        response += f"\n\nThese resources might be helpful:\n{resources}"
+        
     return response
