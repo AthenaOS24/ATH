@@ -11,7 +11,14 @@ load_dotenv()
 
 # Model IDs from Hugging Face
 MODERATION_MODEL_ID = "facebook/roberta-hate-speech-dynabench-r4-target"
-LLM_MODEL_ID = "microsoft/phi-2"
+
+## ================== CẢI TIẾN QUAN TRỌNG NHẤT ================== ##
+# Đổi sang model 'distilgpt2' nhỏ và nhanh hơn rất nhiều.
+# Model này phù hợp với môi trường tài nguyên hạn chế như Railway free-tier,
+# giúp ứng dụng phản hồi nhanh chóng và không bị treo.
+LLM_MODEL_ID = "distilgpt2"
+## ============================================================= ##
+
 SENTIMENT_MODEL_ID = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 EMOTION_MODEL_ID = "bhadresh-savani/distilbert-base-uncased-emotion"
 EMBEDDING_MODEL_ID = "all-MiniLM-L6-v2"
@@ -121,7 +128,7 @@ MENTAL_HEALTH_RESOURCES = {
 # ENVIRONMENT CONFIGURATION
 # ==============================================================================
 
-# Configure PyTorch to optimize GPU memory usage
+# Configure PyTorch to optimize GPU memory usage (has no effect on CPU, but is safe to keep)
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
-print("Configuration file loaded successfully with extended patterns.")
+print("Configuration file loaded successfully with optimized LLM_MODEL_ID for performance.")
