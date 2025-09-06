@@ -11,7 +11,7 @@ load_dotenv()
 
 # Model IDs from Hugging Face
 MODERATION_MODEL_ID = "facebook/roberta-hate-speech-dynabench-r4-target"
-LLM_MODEL_ID = "google/gemma-2b-it"
+LLM_MODEL_ID = "microsoft/phi-2" 
 SENTIMENT_MODEL_ID = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 EMOTION_MODEL_ID = "bhadresh-savani/distilbert-base-uncased-emotion"
 EMBEDDING_MODEL_ID = "all-MiniLM-L6-v2"
