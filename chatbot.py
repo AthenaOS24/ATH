@@ -97,8 +97,14 @@ def generate_response(user_input: str, history: list):
     
     output = pipe(
         formatted_prompt,
-        max_length=len(llm_tokenizer.encode(formatted_prompt)) + 512,
-        num_return_sequences=1
+        # Chỉ sử dụng max_new_tokens để không bị xung đột với max_length
+        # Giảm xuống 256 để phản hồi nhanh hơn, tránh treo
+        max_new_tokens=256, 
+        num_return_sequences=1,
+        # Thêm truncation=True để xử lý cảnh báo
+        truncation=True,
+        # Giới hạn độ dài tối đa mà tokenizer có thể xử lý một cách an toàn
+        max_length=1024 
     )
     
     response = output[0]['generated_text']
