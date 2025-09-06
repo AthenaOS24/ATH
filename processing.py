@@ -1,4 +1,3 @@
-# processing.py
 import re
 import torch
 from datetime import datetime
@@ -6,11 +5,11 @@ from models import get_moderation_model, get_sentiment_analyzer, get_emotion_ana
 from config import CRISIS_PATTERNS, CONCERN_PATTERNS, MENTAL_HEALTH_RESOURCES
 
 # ==============================================================================
-#  SAFETY & MODERATION FUNCTIONS (HÀM AN TOÀN & KIỂM DUYỆT)
+# SAFETY & MODERATION FUNCTIONS
 # ==============================================================================
 
 def moderate_text(text):
-    """Kiểm duyệt văn bản để phát hiện nội dung độc hại."""
+    """Moderates text to detect harmful content."""
     mod_model, mod_tokenizer = get_moderation_model()
     inputs = mod_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
     inputs = {k: v.to(mod_model.device) for k, v in inputs.items()}
@@ -21,7 +20,7 @@ def moderate_text(text):
     return {'is_harmful': harmful_score > 0.7, 'score': harmful_score}
 
 def sanitize_input(text):
-    """Làm sạch đầu vào để loại bỏ mã độc và giới hạn độ dài."""
+    """Sanitizes input to remove malicious code and limit length."""
     text = re.sub(r'<script.*?>.*?</script>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'<[^>]+>', '', text)
     text = re.sub(r'[^\w\s.,!?\'-]', '', text)
@@ -31,7 +30,7 @@ def sanitize_input(text):
     return text.strip()
 
 def anonymize_text(text):
-    """Ẩn danh các thông tin cá nhân nhạy cảm."""
+    """Anonymizes sensitive personal information."""
     text = re.sub(r'\S+@\S+', '[EMAIL]', text)
     text = re.sub(r'(\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4})', '[PHONE]', text)
     text = re.sub(r'\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}', '[CREDIT_CARD]', text)
@@ -39,7 +38,7 @@ def anonymize_text(text):
     return text
 
 def enhanced_crisis_detection(text):
-    """Phát hiện khủng hoảng hoặc lo ngại dựa trên các mẫu regex."""
+    """Detects crisis or concern based on regex patterns."""
     text_lower = text.lower()
     if any(re.search(pattern, text_lower) for pattern in CRISIS_PATTERNS):
         return "crisis"
@@ -48,11 +47,11 @@ def enhanced_crisis_detection(text):
     return None
 
 # ==============================================================================
-#  SENTIMENT & EMOTION ANALYSIS (PHÂN TÍCH CẢM XÚC)
+# SENTIMENT & EMOTION ANALYSIS
 # ==============================================================================
 
 def analyze_sentiment(text):
-    """Phân tích cảm xúc (tích cực, tiêu cực, trung tính)."""
+    """Analyzes sentiment (positive, negative, neutral)."""
     try:
         analyzer = get_sentiment_analyzer()
         result = analyzer(text)[0]
@@ -63,7 +62,7 @@ def analyze_sentiment(text):
         return "neutral", 0.5
 
 def analyze_emotions(text, top_n=3):
-    """Phát hiện các cảm xúc hàng đầu trong văn bản."""
+    """Detects the top emotions in the text."""
     try:
         analyzer = get_emotion_analyzer()
         results = analyzer(text)[0]
@@ -73,7 +72,7 @@ def analyze_emotions(text, top_n=3):
         return [("unknown", 0.5)]
 
 def combined_sentiment_analysis(text):
-    """Kết hợp phát hiện khủng hoảng với phân tích cảm xúc."""
+    """Combines crisis detection with sentiment analysis."""
     urgency = enhanced_crisis_detection(text)
     if urgency:
         return urgency, 1.0, [(f"{urgency}_detected", 1.0)]
@@ -87,11 +86,11 @@ def combined_sentiment_analysis(text):
     return sentiment, sent_score, emotions
 
 # ==============================================================================
-#  UTILITY FUNCTIONS (HÀM TIỆN ÍCH)
+# UTILITY FUNCTIONS
 # ==============================================================================
 
 def get_time_based_greeting():
-    """Tạo lời chào dựa trên thời gian trong ngày."""
+    """Generates a greeting based on the time of day."""
     hour = datetime.now().hour
     if 5 <= hour < 12: return "Good morning"
     if 12 <= hour < 17: return "Good afternoon"
@@ -99,7 +98,7 @@ def get_time_based_greeting():
     return "Hello"
 
 def recommend_resources(urgency_level):
-    """Đề xuất các nguồn trợ giúp dựa trên mức độ khẩn cấp."""
+    """Recommends resources based on the urgency level."""
     resources = MENTAL_HEALTH_RESOURCES.get(urgency_level, [])
     resources.extend(MENTAL_HEALTH_RESOURCES['general'])
     return list(set(resources))
