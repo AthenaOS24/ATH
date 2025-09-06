@@ -9,10 +9,11 @@ from pydantic import BaseModel
 # Lấy API Key của Hugging Face từ biến môi trường
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-## THAY ĐỔI DUY NHẤT Ở ĐÂY ##
-# Đổi sang model DialoGPT-medium, model này chắc chắn hoạt động trên API miễn phí
+# URL cho các model trên Hugging Face Inference API
 CHAT_API_URL = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
-SENTIMENT_API_URL = "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
+## THAY ĐỔI DUY NHẤT Ở ĐÂY ##
+# Đổi sang model sentiment cực kỳ phổ biến và ổn định
+SENTIMENT_API_URL = "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english"
 EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/distilbert-base-uncased-emotion"
 
 
@@ -53,11 +54,9 @@ async def handle_chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="User input is empty.")
 
     try:
-        # For DialoGPT, we send past user inputs and generated responses
         past_user_inputs = [msg['content'] for msg in request.history if msg['role'] == 'user']
         generated_responses = [msg['content'] for msg in request.history if msg['role'] == 'assistant']
 
-        # Define payloads for all API calls
         chat_payload = {
             "inputs": {
                 "past_user_inputs": past_user_inputs,
@@ -69,7 +68,6 @@ async def handle_chat(request: ChatRequest):
         analysis_payload = {"inputs": request.user_input}
 
         async with httpx.AsyncClient() as client:
-            # Run all three API calls concurrently
             chat_task = query_hf_api(CHAT_API_URL, chat_payload, client)
             sentiment_task = query_hf_api(SENTIMENT_API_URL, analysis_payload, client)
             emotion_task = query_hf_api(EMOTION_API_URL, analysis_payload, client)
