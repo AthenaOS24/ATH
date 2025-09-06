@@ -11,7 +11,7 @@ class ChatMessage(BaseModel):
     content: str
 
 class ChatRequest(BaseModel):
-    user_message: str
+    user_input: str
     history: List[ChatMessage] = []
 
 # --- Khởi tạo ứng dụng FastAPI ---
