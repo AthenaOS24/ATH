@@ -1,4 +1,4 @@
-# === PHẦN 1: IMPORT VÀ CẤU HÌNH ===
+# === PART 1: IMPORTS AND CONFIGURATION ===
 import os
 import traceback
 import asyncio
@@ -6,18 +6,18 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Lấy API Key của Hugging Face từ biến môi trường
+# Get Hugging Face API Key from environment variables
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-# URL cho các model trên Hugging Face Inference API
+# URLs for models on the Hugging Face Inference API
 CHAT_API_URL = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
-## THAY ĐỔI DUY NHẤT Ở ĐÂY ##
-# Đổi sang model sentiment cực kỳ phổ biến và ổn định
+## ONLY CHANGE HERE ##
+# Switched to a very popular and stable sentiment model
 SENTIMENT_API_URL = "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english"
 EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/distilbert-base-uncased-emotion"
 
 
-# === PHẦN 2: CÁC HÀM GỌI API ===
+# === PART 2: API CALL FUNCTIONS ===
 
 # Helper function to query the HF API
 async def query_hf_api(api_url: str, payload: dict, client: httpx.AsyncClient):
@@ -30,14 +30,14 @@ async def query_hf_api(api_url: str, payload: dict, client: httpx.AsyncClient):
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:
-        print(f"Lỗi API từ Hugging Face ({api_url}): {e.response.text}")
+        print(f"API Error from Hugging Face ({api_url}): {e.response.text}")
         return {"error": f"API Error: {e.response.status_code}", "detail": e.response.text}
     except Exception as e:
-        print(f"Lỗi không xác định khi gọi {api_url}: {e}")
+        print(f"Unknown error calling {api_url}: {e}")
         return {"error": "Unknown error during API call."}
 
 
-# === PHẦN 3: TẠO API VỚI FASTAPI ===
+# === PART 3: FASTAPI API CREATION ===
 app = FastAPI(title="Athena AI Therapist API (Hugging Face-Only)")
 
 class ChatRequest(BaseModel):
@@ -86,6 +86,6 @@ async def handle_chat(request: ChatRequest):
             "emotion_analysis": emotion_result
         }
     except Exception as e:
-        print("--- [LỖI] Đã có lỗi xảy ra trong endpoint /chat! ---")
+        print("--- [ERROR] An error occurred in the /chat endpoint! ---")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"An internal error occurred: {str(e)}")
