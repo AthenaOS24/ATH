@@ -10,7 +10,7 @@ from pydantic import BaseModel
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # URL cho các model trên Hugging Face Inference API
-CHAT_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+CHAT_API_URL = "https://api-inference.huggingface.co/models/google/gemma-2b"
 SENTIMENT_API_URL = "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
 EMOTION_API_URL = "https://api-inference.huggingface.co/models/bhadresh-savani/distilbert-base-uncased-emotion"
 
