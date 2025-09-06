@@ -7,60 +7,27 @@ from processing import (
 )
 
 def format_prompt_with_context(user_input, conversation_history="", is_first_message=False, retrieved_contexts=None, urgency_level=None):
-    greeting = get_time_based_greeting()
-    intro_instruction = f"""
-    You are starting a new conversation. Begin by introducing yourself as:
-    "{greeting}, I'm Athena, your AI therapist."
-    Then respond to the user's first message with empathy and understanding.
-    """ if is_first_message else ""
-    context_text = ""
-    if retrieved_contexts and len(retrieved_contexts) > 0:
-        context_text = "RETRIEVED EXAMPLES (use these as a guide for your response):\n"
-        for i, context in enumerate(retrieved_contexts):
-            context_text += f"Example {i+1}: {context.strip()}\n\n"
-    urgency_alert = ""
-    if urgency_level == "crisis":
-        urgency_alert = "\n\nCRISIS ALERT: The user has expressed immediate dangerous thoughts. Provide compassionate support while strongly recommending professional help."
-    elif urgency_level == "concern":
-        urgency_alert = "\n\nCONCERN ALERT: The user has expressed serious but not immediate concerns. Provide supportive listening and suggest resources."
-    sentiment, score, emotions = combined_sentiment_analysis(user_input)
-    emo_text = ", ".join([f"{e[0]} ({e[1]:.2f})" for e in emotions])
-    sentiment_text = f"\n\nUSER SENTIMENT: {sentiment} (confidence: {score:.2f}). Emotions: {emo_text}. Adjust your tone accordingly - be more supportive for negative sentiment."
+    """
+    Tạo một prompt đơn giản, dễ hiểu cho các model cơ bản như distilgpt2.
+    """
     
-    prompt_templates = [
-        f"""<s>[INST] <<SYS>>
-        You are Athena, a compassionate AI therapist. Reflect on the user's emotions and provide a supportive response, focusing on validating their feelings.
-        Avoid repeating phrases from the conversation history.
-        {intro_instruction}
-        {context_text}
-        {urgency_alert}
-        {sentiment_text}
-        Previous conversation: {conversation_history}
-        <</SYS>>
-        User: {user_input} [/INST]""",
-        f"""<s>[INST] <<SYS>>
-        You are Athena, a caring AI therapist. Ask an open-ended question to explore the user's situation further, then provide a supportive suggestion.
-        Avoid repeating phrases from the conversation history.
-        {intro_instruction}
-        {context_text}
-        {urgency_alert}
-        {sentiment_text}
-        Previous conversation: {conversation_history}
-        <</SYS>>
-        User: {user_input} [/INST]""",
-        f"""<s>[INST] <<SYS>>
-        You are Athena, a warm AI therapist. Share a coping strategy tailored to the user's input, followed by an empathetic acknowledgment.
-        Avoid repeating phrases from the conversation history.
-        {intro_instruction}
-        {context_text}
-        {urgency_alert}
-        {sentiment_text}
-        Previous conversation: {conversation_history}
-        <</SYS>>
-        User: {user_input} [/INST]"""
-    ]
+    # Bỏ qua các phần phức tạp như greeting, sentiment vì model cơ bản không tận dụng được
+    # và chỉ tập trung vào việc tạo ra một cuộc hội thoại đơn giản.
     
-    return random.choice(prompt_templates)
+    # Bắt đầu prompt với một chỉ dẫn ngắn gọn
+    prompt = "This is a conversation with Athena, a helpful AI assistant.\n\n"
+    
+    # Thêm lịch sử hội thoại nếu có
+    if conversation_history:
+        prompt += conversation_history
+        
+    # Thêm tin nhắn mới của người dùng
+    prompt += f"User: {user_input}\n"
+    
+    # Yêu cầu model đóng vai Athena và trả lời
+    prompt += "Athena:"
+    
+    return prompt
 
 
 def generate_response(user_input: str, history: list):
