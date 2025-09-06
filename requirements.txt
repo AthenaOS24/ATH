@@ -3,3 +3,7 @@ uvicorn[standard]
 pydantic
 python-dotenv
 google-generativeai
+# Thêm lại các thư viện cho model cục bộ
+torch
+transformers
+sentence-transformers
