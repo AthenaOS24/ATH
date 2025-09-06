@@ -12,7 +12,7 @@ load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # API URL của model bạn đã chọn
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+API_URL = "https://api-inference.huggingface.co/models/google/gemma-7b-it"
 
 # === FASTAPI APP SETUP ===
 app = FastAPI(
