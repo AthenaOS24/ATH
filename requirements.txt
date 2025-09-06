@@ -12,6 +12,7 @@ transformers
 sentence-transformers
 scikit-learn
 accelerate
+httpx
 
 # Ghi chú: Đã loại bỏ các thư viện không dùng tới:
 # langchain, faiss-cpu, speechrecognition, pydub, gtts, datasets
