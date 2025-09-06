@@ -1,14 +1,13 @@
 # main.py
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import List, Dict
-
-# Quan trọng: Import file chatbot để các mô hình được tải khi khởi động
-import chatbot 
+from typing import List
+import chatbot
+from models import load_all_models # <-- Thêm dòng này
 
 # --- Định nghĩa cấu trúc dữ liệu cho API ---
 class ChatMessage(BaseModel):
-    role: str # 'user' or 'assistant'
+    role: str
     content: str
 
 class ChatRequest(BaseModel):
@@ -22,6 +21,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# --- Sự kiện khởi động ---
+@app.on_event("startup")
+async def startup_event():
+    """
+    Tải tất cả các mô hình AI khi ứng dụng bắt đầu.
+    Việc này đảm bảo mọi thứ sẵn sàng trước khi nhận request đầu tiên.
+    """
+    print("🚀 Server is starting up, loading AI models...")
+    load_all_models()
+    print("✅ All AI models loaded successfully. Server is ready.")
+
+
 @app.get("/", tags=["Status"])
 def read_root():
     """Endpoint để kiểm tra API có hoạt động không."""
@@ -31,8 +42,6 @@ def read_root():
 def handle_chat(request: ChatRequest):
     """
     Endpoint chính để trò chuyện với Athena.
-    Nhận tin nhắn mới của người dùng và lịch sử cuộc trò chuyện,
-    trả về phản hồi của AI.
     """
     response_text = chatbot.generate_response(
         user_input=request.user_message,
